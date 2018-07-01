@@ -12,16 +12,10 @@ def test_shorten_fname():
     npt.assert_equal(util.shorten_fname("fname"), "fname")
 
 
-def test_make_list():
-    """Test util.make_list"""
-    npt.assert_equal(util.make_list(1), [1])
-    npt.assert_equal(util.make_list([1]), [1])
-
-
-def test_remove_files():
+def test_remove_files(tmpdir):
     """Test util.remove_files"""
     # Pass in single path (non-list)
-    fpath = "/tmp/cesium.temp.test"
+    fpath = os.path.join(str(tmpdir), "cesium.test")
     f = open(fpath, "w").close()
     assert os.path.exists(fpath)
     util.remove_files(fpath)

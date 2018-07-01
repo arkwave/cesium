@@ -53,12 +53,10 @@ addons:
     - fontconfig
     - libfreetype6-dev
     - libxft-dev
-    - libhdf5-serial-dev
-    - libnetcdf-dev
 
 env:
-    global:
-        - GH_REF: github.com/cesium-ml/docs
+  global:
+    - secure: "Fsx12sYNJG2MCvy1wPhYQOlOXTp9sUCqeD19P4h0hl7Cx7/URqOXzGbYG/fSBjQOVYiICuiEHH4Ln6Eo6+hSGRzbshb1J+dvDGA7BAiGo4l5RQwZDr/2vzFZSFqZeR3DcV9OchTCVKBLUqY309Yu0WyjX0H3KjQA1GLWVqulEtY="
 
 notifications:
   webhooks:
@@ -72,25 +70,26 @@ matrix:
   include:
     - python: 2.7
       env:
-        - TEST_TARGET=test
         - SKIP_DOCS=1
     - python: 3.4
-      env:
-        - TEST_TARGET=test
     - python: 3.5
+    - python: 3.6
       env:
-        - TEST_TARGET=test
+        - COVERAGE=1
         - DEPLOY_DOCS=1
 
 before_install:
   - ccache -s
   - export PATH=/usr/lib/ccache:${PATH}
   - which python; python --version
-  - source .drone/travis_funcs.sh
+  - source .travis/travis_funcs.sh
 
 install:
-  - .drone/travis_install.sh
+  - .travis/travis_install.sh
 
-script: .drone/travis_script.sh
+script: .travis/travis_script.sh
 
-after_success: .drone/deploy_docs.sh
+after_success:
+  - .travis/deploy_docs.sh
+  - pip install codecov
+  - codecov

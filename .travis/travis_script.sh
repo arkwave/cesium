@@ -2,15 +2,14 @@
 
 set -ex
 
-source ~/envs/cesium/bin/activate
-
-
 section "Tests"
 
-make ${TEST_TARGET}
+if [[ -n $COVERAGE ]]; then
+    PYTEST_FLAGS='--cov=./'
+fi
+python -m pytest -v $PYTEST_FLAGS
 
 section_end "Tests"
-
 
 section "Build.docs"
 

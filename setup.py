@@ -11,7 +11,7 @@ DESCRIPTION         = 'Machine Learning Time-Series Platform'
 LONG_DESCRIPTION    = descr
 MAINTAINER          = 'cesium Team'
 MAINTAINER_EMAIL    = 'stefanv@berkeley.edu'
-URL                 = 'http://cesium.ml'
+URL                 = 'http://cesium-ml.org'
 LICENSE             = 'Modified BSD'
 DOWNLOAD_URL        = 'https://github.com/cesium-ml/cesium'
 PYTHON_VERSION      = (3, 4)
@@ -44,7 +44,7 @@ def configuration(parent_package='', top_path=None):
 with open('cesium/version.py') as fid:
     for line in fid:
         if line.startswith('version'):
-            VERSION = line.strip().split('=')[-1][1:-1]
+            VERSION = line.split('=')[-1].strip(' \'"\n')
             break
 
 with open('requirements.txt') as fid:
@@ -117,7 +117,7 @@ if __name__ == "__main__":
         ],
 
         install_requires=INSTALL_REQUIRES,
-        setup_requires=['cython>=0.21'],
+        setup_requires=['cython>=0.25'],
         requires=REQUIRES,
         configuration=configuration,
         packages=setuptools.find_packages(exclude=['doc']),

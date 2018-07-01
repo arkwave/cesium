@@ -1,12 +1,9 @@
-import collections
 import contextlib
 import errno
 import os
 import tarfile
 import tempfile
 import zipfile
-
-from .custom_exceptions import DataFormatError
 
 
 __all__ = ['shorten_fname', 'remove_files', 'extract_time_series']
@@ -29,27 +26,6 @@ def shorten_fname(file_path):
     return os.path.splitext(os.path.basename(file_path))[0]
 
 
-def make_list(x):
-    """Wrap `x` in a list if it isn't already a list or tuple.
-
-    Parameters
-    ----------
-    x : any valid object
-        The parameter to be wrapped in a list.
-
-    Returns
-    -------
-    list or tuple
-        Returns `[x]` if `x` is not already a list or tuple, otherwise
-        returns `x`.
-
-    """
-    if isinstance(x, collections.Iterable) and not isinstance(x, (str, dict)):
-        return x
-    else:
-        return [x]
-
-
 def remove_files(paths):
     """Remove specified file(s) from disk.
 
@@ -59,7 +35,9 @@ def remove_files(paths):
         Path(s) to file(s) to be removed from disk.
 
     """
-    paths = make_list(paths)
+    if isinstance(paths, str):
+        paths = [paths]
+
     for path in paths:
         try:
             os.remove(path)
@@ -105,12 +83,17 @@ def extract_time_series(data_path, cleanup_archive=True, cleanup_files=False,
 
     if tarfile.is_tarfile(data_path):
         archive = tarfile.open(data_path)
-        archive.extractall(path=extract_dir)
-        all_paths = [os.path.join(extract_dir, f) for f in archive.getnames()]
+        members_to_extract = [x for x in archive.getmembers() if not
+                              x.name.startswith(('.', '/'))]
+        extracted_names = [x.name for x in members_to_extract]
+        archive.extractall(path=extract_dir, members=members_to_extract)
+        all_paths = [os.path.join(extract_dir, f) for f in extracted_names]
     elif zipfile.is_zipfile(data_path):
         archive = zipfile.ZipFile(data_path)
-        archive.extractall(path=extract_dir)
-        all_paths = [os.path.join(extract_dir, f) for f in archive.namelist()]
+        members_to_extract = [x for x in archive.namelist() if not
+                              x.startswith(('.', '/'))]
+        archive.extractall(path=extract_dir, members=members_to_extract)
+        all_paths = [os.path.join(extract_dir, f) for f in members_to_extract]
     else:
         archive = None
         all_paths = [data_path]

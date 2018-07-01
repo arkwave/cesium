@@ -1,20 +1,9 @@
-from nose.tools import with_setup
 import os
+from uuid import uuid4
 import numpy.testing as npt
 import numpy as np
 from cesium import time_series
 from cesium.time_series import TimeSeries
-
-
-DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
-TEST_TS_PATH = os.path.join(DATA_PATH, "test.nc")
-
-
-def teardown():
-    try:
-        os.remove(TEST_TS_PATH)
-    except OSError:
-        pass
 
 
 def sample_time_series(size=51, channels=1):
@@ -28,18 +17,20 @@ def sample_time_series(size=51, channels=1):
 
 
 def test__compatible_shapes():
-    assert time_series._compatible_shapes(np.arange(5), np.arange(5))
-    assert not time_series._compatible_shapes(np.arange(5), np.arange(6))
+    compat = time_series._compatible_shapes
 
-    assert time_series._compatible_shapes([np.arange(5)] * 5, [np.arange(5)] * 5)
-    assert not time_series._compatible_shapes([np.arange(5)] * 5, [np.arange(5)] * 6)
-    assert not time_series._compatible_shapes([np.arange(5)] * 5, [np.arange(6)] * 5)
-    assert not time_series._compatible_shapes(np.arange(5), [np.arange(6)] * 5)
+    assert compat(np.arange(5), np.arange(5))
+    assert not compat(np.arange(5), np.arange(6))
 
-    assert time_series._compatible_shapes([[0, 1], [0, 1]], [[0, 1], [0, 1]])
-    assert not time_series._compatible_shapes([[0, 1], [0, 1]], [[0], [0, 1]])
+    assert compat([np.arange(5)] * 5, [np.arange(5)] * 5)
+    assert not compat([np.arange(5)] * 5, [np.arange(5)] * 6)
+    assert not compat([np.arange(5)] * 5, [np.arange(6)] * 5)
+    assert not compat(np.arange(5), [np.arange(6)] * 5)
 
-    assert time_series._compatible_shapes([0, 1], np.arange(2))
+    assert compat([[0, 1], [0, 1]], [[0, 1], [0, 1]])
+    assert not compat([[0, 1], [0, 1]], [[0], [0, 1]])
+
+    assert compat([0, 1], np.arange(2))
 
 
 def assert_ts_equal(ts1, ts2):
@@ -51,7 +42,7 @@ def assert_ts_equal(ts1, ts2):
         else:
             assert all(np.array_equal(x1_i, x2_i)
                        for x1_i, x2_i in zip(x1, x2))
-    assert ts1.target == ts2.target
+    assert ts1.label == ts2.label
     assert ts1.meta_features == ts2.meta_features
     assert ts1.name == ts2.name
 
@@ -154,24 +145,51 @@ def test_channels_iterator():
         npt.assert_allclose(e_i, e[i])
 
 
-@with_setup(teardown=teardown)
-def test_time_series_netCDF():
+def test_time_series_npz(tmpdir):
     n_channels = 3
     t, m, e = sample_time_series(channels=n_channels)
+
     ts = TimeSeries(t[0], m[0], e[0])
-    ts.to_netcdf(TEST_TS_PATH)
-    ts_nc = time_series.from_netcdf(TEST_TS_PATH)
-    assert_ts_equal(ts, ts_nc)
+    ts_path = os.path.join(str(tmpdir), str(uuid4()) + '.npz')
+    ts.save(ts_path)
+    ts_loaded = time_series.load(ts_path)
+    assert_ts_equal(ts, ts_loaded)
 
     ts = TimeSeries(t[0], m, e[0])
-    ts.to_netcdf(TEST_TS_PATH)
-    ts_nc = time_series.from_netcdf(TEST_TS_PATH)
-    assert_ts_equal(ts, ts_nc)
+    ts_path = os.path.join(str(tmpdir), str(uuid4()) + '.npz')
+    ts.save(ts_path)
+    ts_loaded = time_series.load(ts_path)
+    assert_ts_equal(ts, ts_loaded)
 
     t = [t[i][0:i+2] for i in range(len(t))]
     m = [m[i][0:i+2] for i in range(len(m))]
     e = [e[i][0:i+2] for i in range(len(e))]
     ts = TimeSeries(t, m, e)
-    ts.to_netcdf(TEST_TS_PATH)
-    ts_nc = time_series.from_netcdf(TEST_TS_PATH)
-    assert_ts_equal(ts, ts_nc)
+    ts_path = os.path.join(str(tmpdir), str(uuid4()) + '.npz')
+    ts.save(ts_path)
+    ts_loaded = time_series.load(ts_path)
+    assert_ts_equal(ts, ts_loaded)
+
+
+def test_time_series_sort():
+    t, m, e = sample_time_series(channels=1)
+    t[:2] = t[1::-1]
+    ts = TimeSeries(t, m, e)
+    npt.assert_allclose(ts.time, np.sort(t))
+    npt.assert_allclose(ts.measurement, m[np.argsort(t)])
+    npt.assert_allclose(ts.error, e[np.argsort(t)])
+
+    n_channels = 3
+    t, m, e = sample_time_series(channels=n_channels)
+    t[:, :2] = t[:, 1::-1]
+    ts = TimeSeries(t, m, e)
+    for i in range(len(m)):
+        npt.assert_allclose(ts.time[i], np.sort(t[i]))
+        npt.assert_allclose(ts.measurement[i], m[i][np.argsort(t[i])])
+        npt.assert_allclose(ts.error[i], e[i][np.argsort(t[i])])
+
+    ts = TimeSeries(t[0], m, e[0])
+    for i in range(len(m)):
+        npt.assert_allclose(ts.time[i], np.sort(t[0]))
+        npt.assert_allclose(ts.measurement[i], m[i][np.argsort(t[0])])
+        npt.assert_allclose(ts.error[i], e[0][np.argsort(t[0])])

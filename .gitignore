@@ -10,13 +10,13 @@
 .#*
 *.swp
 **/.DS_STORE
-.noseids
 rethinkdb_data
 cesium.egg-info
 !cesium/tests/data
 external
 doc/_build
 doc/api
+doc/feature_table.rst
 dist
 .eggs
 .coverage
